@@ -1,0 +1,321 @@
+---
+title: "Untitled"
+author: "Pat Healy"
+date: "7 May 2020"
+output: html_document
+---
+
+```{r}
+library(rvest)
+library(tidyverse)
+library(data.table)
+library(DT)
+library(magrittr)
+library(digest)
+library(RPostgreSQL)
+library(tidytext)
+library(config)
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(RColorBrewer)
+library(RCurl)
+library(XML)
+library(stringr)
+library(zoo)
+library(ggplot2)
+library(knitr)
+```
+
+```{r}
+listings <- read.csv("data.csv")
+```
+```{r}
+x <- read.csv("data.csv")
+```
+
+```{r}
+listings <- as.data.table(listings)
+
+```
+
+```{r}
+listings
+```
+
+```{r}
+#obtain full description for all job postings
+for (i in (1:length(listings$Link))){
+  description <- tryCatch(
+     html_text(html_node(read_html(as.character(listings$Link[i])),'.jobsearch-JobComponent-description')),
+     error=function(e){NA}
+  )
+  if (is.null(description)){
+    desc <- NA
+  }
+  listings$description[i] <- description
+}
+```
+```{r}
+datatable(listings)
+```
+
+```{r}
+write.csv(listings, file = "descriptions.csv", fileEncoding = "UTF-8")
+```
+
+```{r}
+library(wordcloud)
+library(SnowballC)
+res <- rquery.wordcloud(paste(listings$description), type="text", 
+        lang="english", excludeWords = c("data", "experience","will","work"),
+        textStemming = FALSE,  colorPalette="Paired",
+        max.words=500)
+```
+```{r}
+results <- as.data.frame(listings)
+```
+
+
+```{r}
+library(dplyr)
+
+```
+```{r}
+#reading in saved file
+results <- read.csv("descriptions.csv", encoding = "UTF-8")
+```
+
+```{r}
+library(quanteda)
+library(readtext)
+avector <- results[['description']]
+description <- as.character(avector)
+#replace description to get a character vector
+results <- results[ -c(2,11) ]
+
+results <- as.data.frame(results)
+results <- cbind(results, description)
+results[] <- lapply(results, as.character)
+#write descriptions as a vector
+acorp<-corpus(description)
+#summary(acorp)
+```
+```{r}
+#Try a data frame
+codes <- c("python", "aws")
+
+# lower case for exact search
+results$description = tolower(results$description)
+
+#remove commas
+results$description <- as.character(gsub(",","",results$description))
+
+#Technical Skills
+results <- results %>% 
+  mutate(Python = grepl("\\<python\\>| \\<python\\>,", results$description)) %>%
+  mutate(AWS = grepl("\\<aws\\>| \\<aws\\>,", results$description)) %>%
+  mutate(R = grepl("\\<r\\>| \\<r\\>,", results$description)) %>%
+  mutate(APIs = grepl("\\<api's\\>| \\<api's\\>,", results$description)) %>%
+  mutate(CloudServices = grepl("\\<cloud\\>| \\<cloud\\>,", results$description)) %>%
+  mutate(BusinessIntellegence= grepl("\\<bi\\>| \\<bi\\>,", results$description)) %>%
+  mutate(bi2 = grepl("\\<business intellegence\\>| \\<business intellegence\\>,", results$description)) %>%
+  mutate(Azure = grepl("\\<azure\\>| \\<azure\\>,", results$description)) %>%
+  mutate(RestAPI = grepl("\\<rest\\>| \\<rest\\>,", results$description)) %>%
+  mutate(sas = grepl("\\<sas\\>| \\<sas\\>,", results$description)) %>%
+  mutate(sql = grepl("\\<sql\\>| \\<sql\\>,", results$description)) %>%
+  mutate(ruby = grepl("\\<ruby\\>| \\<ruby\\>,", results$description)) %>%
+  mutate(java = grepl("\\<java\\>| \\<java\\>,", results$description)) %>%
+  mutate(Visulisation = grepl("\\<visualisation\\>| \\<visualisation\\>,", results$description)) %>%
+  mutate(Forecasting = grepl("\\<forecasting\\>| \\<forecasting\\>,", results$description)) %>%
+  mutate(Tableua = grepl("\\<tableua\\>| \\<tableua\\>,", results$description)) %>%
+  mutate(Salesforce = grepl("\\<salesforce\\>| \\<salesforce\\>,", results$description)) %>%
+  mutate(Wrangling = grepl("\\<wrangling\\>| \\<wrangling\\>,", results$description)) %>%
+  mutate(PredictiveModelling = grepl("\\<predicitve\\>| \\<predictive\\>,", results$description)) %>%
+  mutate(MachineLearning = grepl("\\<machine learning\\>| \\<machine learning\\>,", results$description)) %>%
+  mutate(Datamining = grepl("\\<data mining\\>| \\<data mining\\>,", results$description)) %>%
+  mutate(Excel = grepl("\\<excel\\>| \\<excel\\>,", results$description))
+  
+  
+  
+```
+```{r}
+#Soft Skills
+results <- results %>% 
+  mutate(Communication = grepl("\\<communication\\>| \\<communication\\>,", results$description)) %>%
+   mutate(Teamwork = grepl("\\<teamwork\\>| \\<teamwork\\>,", results$description)) %>%
+  mutate(Independent = grepl("\\<independent\\>| \\<independent\\>,", results$description)) %>%
+  mutate(RemoteWorking = grepl("\\<remote\\>| \\<remote\\>,", results$description)) %>%
+  mutate(Collaborative = grepl("\\<collaborative\\>| \\<collaborative\\>,", results$description)) %>%
+  mutate(Problemsolving = grepl("problem| problem,", results$description)) %>%
+  mutate(Teamwork = grepl("\\<teamwork\\>| \\<teamwork\\>,", results$description)) %>%
+  mutate(Consistency = grepl("consist| \\consist,", results$description)) %>%
+  mutate(StakeholderManagement = grepl("\\<stakeholder\\>| \\<stakeholder\\>,", results$description)) %>%
+  mutate(Leadership = grepl("\\<leadership\\>| \\<leadership\\>,", results$description)) %>%
+  mutate(Listening = grepl("\\<listening\\>| \\<listening\\>,", results$description)) %>%
+  mutate(Storytelling = grepl("story| story,", results$description)) %>%
+  mutate(Multitasking = grepl("\\<multitasking\\>| \\<multitasking\\>,", results$description)) %>%
+  mutate(Selfstarter = grepl("starter| starter,", results$description)) %>%
+  mutate(Teamwork = grepl("\\<teamwork\\>| \\<teamwork\\>,", results$description)) %>%
+  mutate(Writing = grepl("\\<writing\\>| \\<writing\\>,", results$description)) %>%
+  mutate(Presentation = grepl("presentation| presentation,", results$description)) %>%
+  mutate(Flexibility = grepl("flex| flex,", results$description)) %>%
+  mutate(Teamwork = grepl("\\<teamwork\\>| \\<teamwork\\>,", results$description)) %>%
+  mutate(TimeManagement = grepl("time| time,", results$description)) %>%
+  mutate(Teamwork = grepl("\\<teamwork\\>| \\<teamwork\\>,", results$description)) %>%
+  mutate(Enthusiasm = grepl("enthus| enthus,", results$description)) %>%
+  mutate(ConflictResolution = grepl("conflict| conflict,", results$description)) %>%
+  mutate(Negotiation = grepl("negotiat| negotiat,", results$description)) %>%
+  mutate(Honesty = grepl("honesty| honesty,", results$description)) %>%
+  mutate(Research = grepl("research| research,", results$description)) 
+  
+  
+  
+```
+
+```{r}
+#Education
+results <- results %>% 
+  mutate(ph.d = grepl("ph.d| ph.d,", results$description)) %>%
+  mutate(bachelor = grepl("bach| bach,", results$description)) %>%
+  mutate(masters = grepl("master| master,", results$description)) %>%
+  mutate(stats = grepl("statist| statist,", results$description)) %>%
+  mutate(maths = grepl("math| math,", results$description)) %>%
+  mutate(economic = grepl("econ| econ,", results$description)) %>%
+  mutate(analytics = grepl("analytics| analytics,", results$description)) 
+```
+
+#Creating a count for both types of skill
+```{r}
+#Take out Technical skills as a table and count the number of jobs each skill appears in
+library(qdapTools)
+technical <- results[c(11:32)]
+count_tech<- mtabulate(technical)
+colnames(count_tech)[2] <- "yes"
+colnames(count_tech)[1] <- "no"
+count_tech <- count_tech[order(count_tech$yes, decreasing = TRUE),]
+top_technical_skills <- count_tech[1:10,]
+v <- rownames(top_technical_skills)
+
+
+```
+Pun into excel sheet as question
+```{r}
+QnA1 <- as.data.table(c("What are the top technical skills this month?"))
+v <- as.data.table(v)
+
+v <- v %>%
+  summarize(v = toString(v)) %>%
+  ungroup
+
+QnA1 <- cbind(QnA1, v)
+```
+```{r}
+#Top soft skills
+soft <- results[c(33:54)]
+count_soft<- mtabulate(soft)
+colnames(count_soft)[2] <- "yes"
+colnames(count_soft)[1] <- "no"
+count_soft <- count_soft[order(count_soft$yes, decreasing = TRUE),]
+top_soft_skills <- count_soft[1:10,]
+v <- rownames(top_soft_skills)
+```
+```{r}
+#create a question for soft skills
+QnA2 <- as.data.table(c("What are the top soft skills this month?"))
+v <- as.data.table(v)
+
+v <- v %>%
+  summarize(v = toString(v)) %>%
+  ungroup
+
+QnA2 <- cbind(QnA2, v)
+```
+
+What are the top companies hiring this month?
+
+
+```{r}
+#companies with the most job offerings
+library(summarytools)
+QnA3 <- as.data.table(c("Which companies are advertising the most jobs?"))
+v<-  tail(names(sort(table(results$Company))), 10)
+v <- as.data.table(v)
+
+v <- v %>%
+  summarize(v = toString(v)) %>%
+  ungroup
+
+QnA3 <- cbind(QnA3, v)
+```
+
+
+
+```{r}
+#Most common job titles
+QnA4 <- as.data.table(c("What are the most common job titles?"))
+v<-  tail(names(sort(table(results$Title))), 10)
+v <- as.data.table(v)
+
+v <- v %>%
+  summarize(v = toString(v)) %>%
+  ungroup
+
+QnA4 <- cbind(QnA4, v)
+
+```
+
+```{r}
+job_listings <- results %>% filter(Company == "Link Group") 
+job_listings <- job_listings[c(3,9)]
+
+colnames(job_listings)[2] <- "v"
+colnames(job_listings)[1] <- "V1"
+```
+
+```{r}
+QnA <- rbind(QnA1, QnA2, QnA3, job_listings)
+colnames(QnA)[1] <- "Question"
+colnames(QnA)[2] <- "Answer"
+```
+
+```{r}
+library(WriteXLS)
+WriteXLS("QnA", "QnAMaker.xls")
+write.csv(QnA, file= "QnAMaker.csv", fileEncoding = "UTF-8")
+```
+
+
+
+#Jobs with sql
+
+```{r}
+write.csv(results, file= "jobs.csv", fileEncoding = "UTF-8")
+```
+
+```{r}
+#corpus of job titles for dfm
+vect <- results[['Title']]
+title <- as.character(vect)
+corp_title<-corpus(title)
+
+
+#summary(acorp)
+```
+```{r}
+#create ngrams and dfm
+toks1 <- tokens(char_tolower(title), remove_punct = TRUE)
+toks2 <- tokens_remove(toks1, stopwords("english"))
+toks3 <- tokens_ngrams(toks2, 1)
+
+dfm <- dfm(toks3)
+
+```
+```{r}
+tstat_freq <- textstat_frequency(dfm, n = 250)
+```
+
+```{r}
+kwic(acorp, pattern = "creative")
+```
+
